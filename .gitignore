@@ -1,9 +1,4 @@
-.Rhistory
-*.csv
+*
 
-shiny.R
-visual.R
-eda.R
-
-logs/*
-rsconnect/*
+!leaflet.R
+!.gitignore
