@@ -106,12 +106,24 @@ server <- function(input, output, session) {
                        opacity=0.9,
                        fillOpacity=0.5)
   })
+  
   observeEvent(input$mymap_marker_click, {
     p <- input$mymap_marker_click
-    print(p$id)
+    output$airport_plot <- renderPlot({
+      ggplot(clean_local %>%
+               filter(YEAR == input$year) %>%
+               filter(ORIGIN == p$id) %>%
+               mutate(perc = count/sum(count), 0), 
+             aes(reorder(OP_UNIQUE_CARRIER, -perc), perc)) + 
+        geom_bar(stat="identity") +
+        theme_bw() +
+        labs(x="Airline Code", y="Outbound Flight Percentage") +
+        scale_y_continuous(labels = scales::percent)
+    })
+    # print(p$id)
     showModal(modalDialog(
       title = paste("Airline Dominance in ", p$id),
-      ggplot(clean_local[clean_local$YEAR==2003,][clean_local[clean_local$YEAR==2003,]$ORIGIN=="DEN",], aes(OP_UNIQUE_CARRIER)) + geom_bar(),
+      plotOutput("airport_plot"),
       easyClose=T,
       size="l"
     ))
