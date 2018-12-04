@@ -3,6 +3,7 @@ library(sparklyr)
 library(tidyverse)
 library(leaflet)
 library(htmltools)
+library(shinyBS)
 
 
 # ======== Data input
@@ -21,7 +22,8 @@ clean <- all %>%
   group_by(YEAR, ORIGIN, OP_UNIQUE_CARRIER, ORIGIN_CITY_NAME) %>%
   summarize(count = n()) %>%
   group_by(YEAR, ORIGIN) %>%
-  filter(count == max(count)) %>%
+  top_n(6, count) %>%
+  mutate(isMax = count==max(count)) %>%
   arrange(YEAR, ORIGIN, desc(count)) %>%
   left_join(coords, by=c("ORIGIN"="locationID"), copy=T)
 
@@ -34,7 +36,7 @@ clean_local <- clean_local %>%
 # Normalize Count
 max_size <- 25
 min_size <- 5
-clean_local$size <- min_size + (max_size - min_size) * (clean_local$count - min(clean_local$count)) / (max(clean_local$count) - min(clean_local$count))
+clean_local$size <- min_size + (max_size - min_size) * (clean_local$count - min(clean_local$count[clean_local$isMax])) / (max(clean_local$count[clean_local$isMax]) - min(clean_local$count[clean_local$isMax]))
 
 # Define palette
 airlines <- levels(factor(clean_local$OP_UNIQUE_CARRIER))
@@ -72,6 +74,7 @@ server <- function(input, output, session) {
   clean_local_this_year <- eventReactive(input$year, {
     clean_local %>% 
       filter(YEAR == input$year) %>%
+      filter(isMax) %>%
       ungroup()
   }, ignoreNULL = FALSE)
   createLabel <- function(city_name) {
@@ -96,8 +99,21 @@ server <- function(input, output, session) {
                        label=~createLabel(ORIGIN_CITY_NAME),
                        labelOptions=labelOptions(opacity=0.9),
                        opacity=0.9,
-                       fillOpacity=0.5)
+                       fillOpacity=0.5,
+                       layerId=~ORIGIN)
+  })  
+  
+  observeEvent(input$mymap_marker_click, {
+    p <- input$mymap_marker_click
+    print(p$id)
+    showModal(modalDialog(
+      title = paste("Airline Dominance in ", p$id),
+      ggplot(clean_local[clean_local$YEAR==2003,][clean_local[clean_local$YEAR==2003,]$ORIGIN=="DEN",], aes(OP_UNIQUE_CARRIER)) + geom_bar(),
+      easyClose=T,
+      size="l"
+    ))
   })
+  
 }
 
 shinyApp(ui, server)
