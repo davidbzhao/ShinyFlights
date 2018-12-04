@@ -17,17 +17,22 @@ coords <- coords %>%
   filter(locationID %in% hubs)
 
 clean <- all %>%
-  mutate(OP_UNIQUE_CARRIER = recode(OP_UNIQUE_CARRIER, "CO"="AA","EV"="OO","FL"="WN","HP"="AA","MQ"="AA","US"="AA","NW"="DL","XE"="OO","TZ"="WN","OH"="AA","9E"="DL","VX"="AS")) %>%
   filter(ORIGIN %in% hubs) %>%
   group_by(YEAR, ORIGIN, OP_UNIQUE_CARRIER, ORIGIN_CITY_NAME) %>%
-  summarize(count = n()) %>%
+  summarize(count = n()) # %>%
+
+clean_local <- clean %>%
+  ungroup() %>%
+  collect() %>%
+  mutate(OP_UNIQUE_CARRIER = recode(OP_UNIQUE_CARRIER,"CO"="AA","EV"="OO","FL"="WN","HP"="AA","MQ"="AA","US"="AA","NW"="DL","XE"="OO","TZ"="WN","OH"="AA","9E"="DL","VX"="AS")) %>%
+  group_by(YEAR, ORIGIN, OP_UNIQUE_CARRIER, ORIGIN_CITY_NAME) %>%
+  summarize(count=sum(count)) %>%
+  ungroup() %>%
   group_by(YEAR, ORIGIN) %>%
   top_n(6, count) %>%
   mutate(isMax = count==max(count)) %>%
   arrange(YEAR, ORIGIN, desc(count)) %>%
   left_join(coords, by=c("ORIGIN"="locationID"), copy=T)
-
-clean_local <- clean %>% collect()
 
 # Fix Longitude
 clean_local <- clean_local %>%
@@ -39,7 +44,7 @@ min_size <- 5
 clean_local$size <- min_size + (max_size - min_size) * (clean_local$count - min(clean_local$count[clean_local$isMax])) / (max(clean_local$count[clean_local$isMax]) - min(clean_local$count[clean_local$isMax]))
 
 # Define palette
-airlines <- levels(factor(clean_local$OP_UNIQUE_CARRIER))
+airlines <- levels(factor(clean_local$OP_UNIQUE_CARRIER[clean_local$isMax]))
 airline.names <- c("American", "Alaska", "JetBlue", "Independence", "Delta", "Frontier", "SkyWest", "United", "Southwest", "Mesa")
 airline.colors <- c(
   "#2ecc71", # green
@@ -99,10 +104,8 @@ server <- function(input, output, session) {
                        label=~createLabel(ORIGIN_CITY_NAME),
                        labelOptions=labelOptions(opacity=0.9),
                        opacity=0.9,
-                       fillOpacity=0.5,
-                       layerId=~ORIGIN)
-  })  
-  
+                       fillOpacity=0.5)
+  })
   observeEvent(input$mymap_marker_click, {
     p <- input$mymap_marker_click
     print(p$id)
@@ -113,7 +116,6 @@ server <- function(input, output, session) {
       size="l"
     ))
   })
-  
 }
 
 shinyApp(ui, server)
