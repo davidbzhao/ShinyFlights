@@ -5,7 +5,6 @@ library(leaflet)
 library(htmltools)
 library(shinyBS)
 
-
 # ======== Data input
 spark <- spark_connect(master="local")
 all <- spark_read_csv(spark, name="flight", path="all.csv", header=T)
@@ -61,6 +60,7 @@ airline.colors <- c(
 clean_local <- clean_local %>%
   left_join(data.frame(OP_UNIQUE_CARRIER=airlines, name=airline.names))
 palette <- colorFactor(airline.colors, domain=airline.names)
+names(airline.colors) <- airline.names
 
 # ======== Generate Shiny visualization
 
@@ -109,20 +109,22 @@ server <- function(input, output, session) {
   
   observeEvent(input$mymap_marker_click, {
     p <- input$mymap_marker_click
+    print(airline.colors)
     output$airport_plot <- renderPlot({
       ggplot(clean_local %>%
                filter(YEAR == input$year) %>%
                filter(ORIGIN == p$id) %>%
                mutate(perc = count/sum(count), 0), 
-             aes(reorder(OP_UNIQUE_CARRIER, -perc), perc)) + 
-        geom_bar(stat="identity") +
+             aes(reorder(name, -perc), perc)) + 
+        geom_bar(aes(fill=name), stat="identity") +
         theme_bw() +
         labs(x="Airline Code", y="Outbound Flight Percentage") +
-        scale_y_continuous(labels = scales::percent)
+        scale_y_continuous(labels = scales::percent) +
+        scale_fill_manual(name="name", values=airline.colors)
     })
     # print(p$id)
     showModal(modalDialog(
-      title = paste("Airline Dominance in ", p$id),
+      title = paste(input$year, " Airline Dominance in ", p$id),
       plotOutput("airport_plot"),
       easyClose=T,
       size="l"
