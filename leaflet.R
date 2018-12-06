@@ -57,10 +57,23 @@ airline.colors <- c(
   "#5352ed", # pink
   "#badc58" # lime
 )
+airline.colors <- c(
+  "#e6194b",  # red
+  "#f58231",  # orange
+  "#ffe119",  # yellow
+  "#bfef45",  # lime
+  "#3cb44b",  # green
+  "#42d4f4",  # cyan
+  "#4363d8",  # blue
+  "#911eb4",  # purple
+  "#f032e6",  # magenta
+  "#9A6324"  # brown
+)
 clean_local <- clean_local %>%
   left_join(data.frame(OP_UNIQUE_CARRIER=airlines, name=airline.names))
-palette <- colorFactor(airline.colors, domain=airline.names)
+palette <- colorFactor(airline.colors, levels=airline.names)
 names(airline.colors) <- airline.names
+
 
 # ======== Generate Shiny visualization
 
