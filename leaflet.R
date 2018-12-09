@@ -46,18 +46,6 @@ clean_local$size <- min_size + (max_size - min_size) * (clean_local$count - min(
 airlines <- levels(factor(clean_local$OP_UNIQUE_CARRIER[clean_local$isMax]))
 airline.names <- c("American", "Alaska", "JetBlue", "Independence", "Delta", "Frontier", "SkyWest", "United", "Southwest", "Mesa")
 airline.colors <- c(
-  "#2ecc71", # green
-  "#3498db", # blue
-  "#f1c40f", # yellow
-  "#e74c3c", # red
-  "#e67e22", # orange
-  "#9b59b6", # purple
-  "#34495e", # black
-  "#fd79a8", # violet
-  "#5352ed", # pink
-  "#badc58" # lime
-)
-airline.colors <- c(
   "#e6194b",  # red
   "#f58231",  # orange
   "#ffe119",  # yellow
@@ -78,14 +66,34 @@ names(airline.colors) <- airline.names
 # ======== Generate Shiny visualization
 
 ui <- fluidPage(
-  leafletOutput("mymap"),
-  p(),
-  sliderInput(inputId="year",
-              label="Choose a year",
-              value=2017,
-              min=2003,
-              max=2017,
-              sep="")
+  tags$style(type="text/css","
+     #sliderContainer>div {
+        margin: auto;
+     }        
+    "
+  ),
+  titlePanel(
+    h1("Domestic Flight Dominance at Hubs (2003-2017)",
+       style="text-align:center")
+  ),
+  div(
+    leafletOutput("mymap"),
+    style="padding:4rem"
+  ),
+  br(),
+  div(
+      id="sliderContainer",
+      sliderInput(inputId="year",
+                  label="Choose a year",
+                  value=2017,
+                  min=2003,
+                  max=2017,
+                  sep="",
+                  width="100%",
+                  animate=T),
+      animationOptions(interval = 1000, loop = T, playButton = NULL,
+                       pauseButton = NULL)
+  )
 )
 
 server <- function(input, output, session) {
