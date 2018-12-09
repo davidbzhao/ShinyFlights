@@ -11,8 +11,6 @@ spark <- spark_connect(master="local")
 all <- spark_read_csv(spark, name="flight", path="all.csv", header=T)
 coords <- read_csv("usairports.csv")
 hubs <- c("PHX","LAX","SAN","SFO","DEN","MIA","FLL","MCO","TPA","ATL","MDW","ORD","IND","CVG","SDF","BWI","BOS","DTW","MSP","MCI","STL","LAW","EWR","TTN","JFK","LGA","CLT","GSO","CLE","LUK","DAY","PDX","PHL","PIT","CAE","MEM","BNA","DFW","DAL","IAH","SLC","IAD","DCA","SEA")
-library(data.table)
-library(tidyverse)
 
 setwd("D:\\Downloads\\faredata")
 fares <- fread('fares.csv')
@@ -25,7 +23,7 @@ fares_clean <- filtered %>%
   ungroup() %>%
   mutate(ORIGIN_AIRPORT_ID = as.factor(ORIGIN_AIRPORT_ID)) %>%
   inner_join(airport_codes, by=c("ORIGIN_AIRPORT_ID" = "Code.1")) %>%
-  select(YEAR, Code, REPORTING_CARRIER, ITIN_YIELD_AVG, ITIN_YIELD_COUNT) %>%
+  select(YEAR, Code, REPORTING_CARRIER, ITIN_YIELD_AVG, ITIN_YIELD_COUNT, Description) %>%
   mutate(Code = as.character(Code))
 
 # ======== Filter and transform
@@ -91,12 +89,6 @@ names(airline.colors) <- airline.names
 # ======== Generate Shiny visualization
 
 ui <- fluidPage(
-  tags$style(type="text/css","
-     #sliderContainer>div {
-        margin: auto;
-     }        
-    "
-  ),
   titlePanel(
     h2("Domestic Flight Dominance at Hubs (2003-2017)",
        style="text-align:center")
@@ -116,7 +108,8 @@ ui <- fluidPage(
                   width="100%",
                   animate=T)
   ),
-  p("Black border = the dominating airline of that year eventually merged into the specified airline")
+  p("Black border = the dominating airline of that year eventually merged into the specified airline"),
+  p("Size = number of outgoing flights from airport for given carrier")
 )
 
 server <- function(input, output, session) {
@@ -126,8 +119,8 @@ server <- function(input, output, session) {
       filter(isMax) %>%
       ungroup()
   }, ignoreNULL = FALSE)
-  createLabel <- function(city_name, itin_yield_avg) {
-    paste(city_name, " ($", sprintf("%.2f", itin_yield_avg), ")", sep="")
+  createLabel <- function(description, itin_yield_avg) {
+    paste(description," ($", sprintf("%.2f", itin_yield_avg), "/mi)", sep="")
   }
   output$mymap <- renderLeaflet({
     leaflet(clean_local) %>%
@@ -146,7 +139,7 @@ server <- function(input, output, session) {
                        radius=~size,
                        fillColor=~palette(name),
                        color="black",
-                       label=~createLabel(ORIGIN_CITY_NAME, ITIN_YIELD_AVG),
+                       label=~createLabel(Description, ITIN_YIELD_AVG),
                        labelOptions=labelOptions(opacity=0.9),
                        fillOpacity=0.5,
                        opacity=~ifelse(OP_ORIG_CARRIER == OP_UNIQUE_CARRIER, 0, 1),
@@ -163,7 +156,7 @@ server <- function(input, output, session) {
                mutate(perc = count/sum(count), 0), 
              aes(reorder(name, -perc), perc)) + 
         geom_bar(aes(fill=name), stat="identity") +
-        geom_label(aes(label=paste("$", sprintf("%.2f", ITIN_YIELD_AVG)), sep="")) +
+        geom_label(aes(label=paste("$", sprintf("%.2f", ITIN_YIELD_AVG), sep=""))) +
         theme_bw() +
         labs(x="Airline Code", y="Outbound Flight Percentage") +
         scale_y_continuous(labels = scales::percent) +
@@ -182,3 +175,5 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+#save.image(file="Final.RData")
+#write_delim(clean_local, "clean_local.csv", delim=",")

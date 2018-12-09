@@ -1,13 +1,10 @@
+load("Final.RData")
+setwd(".")
 library(shiny)
+library(sparklyr)
+library(tidyverse)
 library(leaflet)
-
-fluidPage(
-  leafletOutput("mymap"),
-  p(),
-  sliderInput(inputId="year",
-              label="Choose a year",
-              value=2017,
-              min=2003,
-              max=2017,
-              sep="")
-)
+library(htmltools)
+library(shinyBS)
+library(data.table)
+ui
