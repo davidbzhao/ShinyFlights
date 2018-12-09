@@ -1,4 +1,6 @@
 *
 
 !leaflet.R
+!ui.R
+!server.R
 !.gitignore
